@@ -8,12 +8,14 @@ import folium
 from streamlit_folium import st_folium
 
 
+@st.cache_data
 def load_data(csv_path: str = "SmartTourRoutePlanner.csv") -> pd.DataFrame:
     """Load the dataset used in the notebook."""
     df = pd.read_csv(csv_path)
     return df
 
 
+@st.cache_data
 def build_traffic_time_line(df: pd.DataFrame) -> go.Figure:
     """Line plot: Impact of Traffic Density on Estimated Travel Time."""
     df = df.copy()
@@ -49,6 +51,7 @@ def build_traffic_time_line(df: pd.DataFrame) -> go.Figure:
     return fig
 
 
+@st.cache_data
 def build_demand_heatmap(df: pd.DataFrame) -> go.Figure:
     """Density heatmap: Travel Demand (Day Type vs Season) with transport animation."""
     fig = px.density_heatmap(
@@ -91,6 +94,7 @@ def build_demand_heatmap(df: pd.DataFrame) -> go.Figure:
     return fig
 
 
+@st.cache_data
 def build_budget_satisfaction_scatter(df: pd.DataFrame) -> go.Figure:
     """Scatter: User Budget vs Satisfaction Rating by Transport Mode."""
     fig = px.scatter(
@@ -130,6 +134,7 @@ def build_budget_satisfaction_scatter(df: pd.DataFrame) -> go.Figure:
     return fig
 
 
+@st.cache_data
 def build_cost_sankey(df: pd.DataFrame) -> go.Figure:
     """Sankey: Travel Cost Flow Distribution."""
     entry_fee = df["entry_fee"].mean()
@@ -176,6 +181,7 @@ def build_cost_sankey(df: pd.DataFrame) -> go.Figure:
     return fig
 
 
+@st.cache_data
 def build_travel_preference_sunburst(df: pd.DataFrame) -> go.Figure:
     """Sunburst: Season → Transport Mode → Destination Type."""
     sunburst_data = (
@@ -215,6 +221,7 @@ def build_travel_preference_sunburst(df: pd.DataFrame) -> go.Figure:
     return fig
 
 
+@st.cache_data
 def build_transport_radar(df: pd.DataFrame) -> go.Figure:
     """Radar chart comparing transport modes across travel factors."""
     radar = df.groupby("transport_mode")[
@@ -280,6 +287,7 @@ def build_transport_radar(df: pd.DataFrame) -> go.Figure:
     return fig
 
 
+@st.cache_data
 def build_traffic_violin(df: pd.DataFrame) -> go.Figure:
     """Violin: Traffic density distribution by day_type."""
     fig = px.violin(
@@ -314,6 +322,7 @@ def build_traffic_violin(df: pd.DataFrame) -> go.Figure:
     return fig
 
 
+@st.cache_data
 def build_route_map(df: pd.DataFrame) -> folium.Map:
     """Folium map: India route visualisation — exact replica of notebook code."""
     city_coords = {
