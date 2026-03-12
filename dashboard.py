@@ -3,84 +3,120 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import folium
-from sklearn.preprocessing import MinMaxScaler
 from streamlit_folium import st_folium
+from sklearn.preprocessing import MinMaxScaler
 
-st.set_page_config(page_title="SmartTour Analytics", layout="wide")
+st.set_page_config(page_title="SmartTour", layout="wide")
 
-# -----------------------------
-# CUSTOM CSS (Aesthetic UI)
-# -----------------------------
+# ---------------------------------------------------
+# GLOBAL CSS (Lovable Style UI)
+# ---------------------------------------------------
 st.markdown("""
 <style>
 
-.hero {
-background: linear-gradient(120deg,#0f172a,#1e293b,#334155);
-padding: 40px;
-border-radius: 18px;
-color:white;
-margin-bottom:20px;
-transition: transform 0.3s ease;
+.block-container{
+padding-top:1rem;
+padding-bottom:1rem;
+max-width:1400px;
 }
 
-.hero:hover{
-transform: scale(1.01);
+.hero{
+background:linear-gradient(120deg,#0f172a,#1e293b,#334155);
+border-radius:20px;
+padding:45px;
+color:white;
+position:relative;
+overflow:hidden;
+margin-bottom:25px;
+}
+
+.hero:before{
+content:"";
+position:absolute;
+top:-50%;
+left:-50%;
+width:200%;
+height:200%;
+background:radial-gradient(circle at center, rgba(255,255,255,0.12), transparent 60%);
+transition:all .6s ease;
+}
+
+.hero:hover:before{
+transform:scale(1.2);
 }
 
 .hero-title{
-font-size:38px;
+font-size:42px;
 font-weight:700;
+letter-spacing:-1px;
 }
 
 .hero-sub{
 opacity:0.8;
-font-size:16px;
+font-size:17px;
+margin-top:10px;
 }
 
-.metric-card{
-background:#f8fafc;
+.kpi-card{
+background:white;
 padding:20px;
-border-radius:12px;
+border-radius:14px;
 text-align:center;
-box-shadow:0 2px 10px rgba(0,0,0,0.05);
+box-shadow:0 3px 12px rgba(0,0,0,0.08);
+transition:all .2s ease;
+}
+
+.kpi-card:hover{
+transform:translateY(-4px);
+box-shadow:0 10px 22px rgba(0,0,0,0.15);
 }
 
 .section{
 background:white;
 padding:25px;
-border-radius:16px;
-margin-bottom:25px;
-box-shadow:0 2px 12px rgba(0,0,0,0.08);
+border-radius:18px;
+margin-bottom:20px;
+box-shadow:0 3px 12px rgba(0,0,0,0.08);
+}
+
+.section h3{
+margin-top:0px;
+}
+
+.small-desc{
+color:#6b7280;
+font-size:14px;
+margin-bottom:15px;
 }
 
 </style>
 """, unsafe_allow_html=True)
 
-# -----------------------------
+# ---------------------------------------------------
 # LOAD DATA
-# -----------------------------
+# ---------------------------------------------------
 @st.cache_data
 def load_data():
     return pd.read_csv("SmartTourRoutePlanner.csv")
 
 df = load_data()
 
-# -----------------------------
+# ---------------------------------------------------
 # HERO SECTION
-# -----------------------------
+# ---------------------------------------------------
 st.markdown('<div class="hero">', unsafe_allow_html=True)
 
-col1,col2 = st.columns([2,1])
+left,right = st.columns([2,1])
 
-with col1:
-    st.markdown('<div class="hero-title">SmartTour Route Intelligence</div>', unsafe_allow_html=True)
+with left:
+    st.markdown('<div class="hero-title">SmartTour Travel Intelligence</div>', unsafe_allow_html=True)
+
     st.markdown(
-    '<div class="hero-sub">Explore travel demand, cost patterns, and transportation preferences across India.</div>',
-    unsafe_allow_html=True)
+        '<div class="hero-sub">Analyze travel demand, transportation patterns and tourism routes across India.</div>',
+        unsafe_allow_html=True
+    )
 
-with col2:
-    st.markdown("### Filters")
-
+with right:
     season_filter = st.multiselect(
         "Season",
         df["season"].unique(),
@@ -99,48 +135,49 @@ with col2:
         default=df["day_type"].unique()
     )
 
-st.markdown('</div>', unsafe_allow_html=True)
+st.markdown("</div>", unsafe_allow_html=True)
 
-# -----------------------------
+# ---------------------------------------------------
 # FILTER DATA
-# -----------------------------
+# ---------------------------------------------------
 filtered_df = df[
     (df["season"].isin(season_filter)) &
     (df["transport_mode"].isin(transport_filter)) &
     (df["day_type"].isin(day_filter))
 ]
 
-# -----------------------------
-# KPI METRICS
-# -----------------------------
-m1,m2,m3,m4 = st.columns(4)
+# ---------------------------------------------------
+# KPI CARDS
+# ---------------------------------------------------
+k1,k2,k3,k4 = st.columns(4)
 
-m1.metric("Routes", len(filtered_df))
-m2.metric("Avg Satisfaction", round(filtered_df["satisfaction_rating"].mean(),2))
-m3.metric("Avg Budget", round(filtered_df["user_budget"].mean(),2))
-m4.metric("Avg Travel Time", round(filtered_df["estimated_travel_time_hr"].mean(),2))
+k1.markdown(f'<div class="kpi-card"><h3>{len(filtered_df)}</h3>Routes</div>',unsafe_allow_html=True)
+k2.markdown(f'<div class="kpi-card"><h3>{round(filtered_df["satisfaction_rating"].mean(),2)}</h3>Avg Satisfaction</div>',unsafe_allow_html=True)
+k3.markdown(f'<div class="kpi-card"><h3>{round(filtered_df["user_budget"].mean(),0)}</h3>Avg Budget</div>',unsafe_allow_html=True)
+k4.markdown(f'<div class="kpi-card"><h3>{round(filtered_df["estimated_travel_time_hr"].mean(),2)}</h3>Travel Time</div>',unsafe_allow_html=True)
 
-st.divider()
+st.write("")
 
-# -----------------------------
+# ---------------------------------------------------
 # TABS
-# -----------------------------
+# ---------------------------------------------------
 tab1,tab2,tab3,tab4,tab5 = st.tabs([
 "Traffic",
 "Demand",
 "Budget",
 "Costs",
-"India Map"
+"Map"
 ])
 
-# -----------------------------
+# ---------------------------------------------------
 # TRAFFIC
-# -----------------------------
+# ---------------------------------------------------
 with tab1:
 
-    st.markdown("### Traffic Density vs Travel Time")
+    st.markdown('<div class="section">', unsafe_allow_html=True)
 
-    st.caption("Uses **traffic_density** and **estimated_travel_time_hr** to show how congestion increases travel duration.")
+    st.markdown("### Traffic Density vs Travel Time")
+    st.markdown('<div class="small-desc">Uses traffic_density and estimated_travel_time_hr to show congestion impact.</div>', unsafe_allow_html=True)
 
     filtered_df["traffic_density_bin"]=pd.cut(
         filtered_df["traffic_density"],
@@ -148,7 +185,7 @@ with tab1:
         labels=["Very Low","Low","Medium","High","Very High"]
     )
 
-    traffic_time=filtered_df.groupby("traffic_density_bin")["estimated_travel_time_hr"].mean().reset_index()
+    traffic_time = filtered_df.groupby("traffic_density_bin")["estimated_travel_time_hr"].mean().reset_index()
 
     fig=px.line(
         traffic_time,
@@ -159,31 +196,20 @@ with tab1:
 
     st.plotly_chart(fig,use_container_width=True)
 
-    st.markdown("### Traffic Distribution")
-
-    st.caption("Compares weekday vs weekend traffic using **traffic_density**.")
-
-    fig2=px.violin(
-        filtered_df,
-        x="day_type",
-        y="traffic_density",
-        color="day_type",
-        box=True
-    )
-
-    st.plotly_chart(fig2,use_container_width=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
-# -----------------------------
+# ---------------------------------------------------
 # DEMAND
-# -----------------------------
+# ---------------------------------------------------
 with tab2:
 
+    st.markdown('<div class="section">', unsafe_allow_html=True)
+
     st.markdown("### Travel Demand Heatmap")
+    st.markdown('<div class="small-desc">Season vs Day Type using popularity_score.</div>', unsafe_allow_html=True)
 
-    st.caption("Uses **season**, **day_type**, and **popularity_score** to identify peak tourism periods.")
-
-    fig3=px.density_heatmap(
+    fig=px.density_heatmap(
         filtered_df,
         x="season",
         y="day_type",
@@ -191,106 +217,59 @@ with tab2:
         histfunc="avg"
     )
 
-    st.plotly_chart(fig3,use_container_width=True)
+    st.plotly_chart(fig,use_container_width=True)
 
-    st.markdown("### Travel Preference Hierarchy")
-
-    st.caption("Shows relationships between **season**, **transport_mode**, and **destination_type**.")
-
-    sunburst_data=filtered_df.groupby(["season","transport_mode","destination_type"])["popularity_score"].sum().reset_index()
-
-    fig4=px.sunburst(
-        sunburst_data,
-        path=["season","transport_mode","destination_type"],
-        values="popularity_score"
-    )
-
-    st.plotly_chart(fig4,use_container_width=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
-# -----------------------------
+# ---------------------------------------------------
 # BUDGET
-# -----------------------------
+# ---------------------------------------------------
 with tab3:
+
+    st.markdown('<div class="section">', unsafe_allow_html=True)
 
     st.markdown("### Budget vs Satisfaction")
 
-    st.caption("Explores how **user_budget** affects **satisfaction_rating** across transport types.")
-
-    fig5=px.scatter(
+    fig=px.scatter(
         filtered_df,
         x="user_budget",
         y="satisfaction_rating",
         color="transport_mode"
     )
 
-    st.plotly_chart(fig5,use_container_width=True)
+    st.plotly_chart(fig,use_container_width=True)
 
-    st.markdown("### Traveler Preference Radar")
-
-    st.caption("Normalizes travel factors to compare transport modes.")
-
-    radar=filtered_df.groupby("transport_mode")[[
-        "user_budget",
-        "user_time_constraint_hr",
-        "popularity_score",
-        "traffic_density",
-        "satisfaction_rating"
-    ]].mean()
-
-    scaler=MinMaxScaler()
-    radar_scaled=scaler.fit_transform(radar)
-
-    categories=["Budget","Time","Popularity","Traffic","Satisfaction"]
-
-    fig6=go.Figure()
-
-    for i,mode in enumerate(radar.index):
-
-        values=radar_scaled[i].tolist()
-        values+=values[:1]
-
-        fig6.add_trace(go.Scatterpolar(
-            r=values,
-            theta=categories+[categories[0]],
-            fill="toself",
-            name=mode
-        ))
-
-    fig6.update_layout(polar=dict(radialaxis=dict(visible=True,range=[0,1])))
-
-    st.plotly_chart(fig6,use_container_width=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
-# -----------------------------
-# COSTS
-# -----------------------------
+# ---------------------------------------------------
+# COST
+# ---------------------------------------------------
 with tab4:
 
-    st.markdown("### Travel Cost Breakdown")
-
-    st.caption("Average values from **entry_fee**, **accommodation_cost**, and **food_cost**.")
+    st.markdown('<div class="section">', unsafe_allow_html=True)
 
     entry=filtered_df["entry_fee"].mean()
     accom=filtered_df["accommodation_cost"].mean()
     food=filtered_df["food_cost"].mean()
 
-    fig7=go.Figure(data=[go.Sankey(
+    fig=go.Figure(data=[go.Sankey(
         node=dict(label=["Total","Entry","Accommodation","Food"]),
         link=dict(source=[0,0,0],target=[1,2,3],value=[entry,accom,food])
     )])
 
-    st.plotly_chart(fig7,use_container_width=True)
+    st.plotly_chart(fig,use_container_width=True)
+
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
-# -----------------------------
-# INDIA MAP
-# -----------------------------
+# ---------------------------------------------------
+# MAP
+# ---------------------------------------------------
 with tab5:
 
-    st.markdown("### India Travel Routes")
-
-    st.caption("Shows routes between cities colored by transport mode.")
+    st.markdown('<div class="section">', unsafe_allow_html=True)
 
     city_coords={
     "Delhi":(28.6139,77.2090),
@@ -312,13 +291,7 @@ with tab5:
 
     m=folium.Map(location=[22.5,80],zoom_start=5,tiles="cartodbpositron")
 
-    colors={
-    "car":"blue",
-    "train":"green",
-    "bike":"orange",
-    "walk":"purple",
-    "bus":"brown"
-    }
+    colors={"car":"blue","train":"green","bike":"orange","walk":"purple","bus":"brown"}
 
     for _,row in filtered_df.iterrows():
 
@@ -331,14 +304,6 @@ with tab5:
 
             folium.PolyLine(locations=[start,end],color=color,weight=3).add_to(m)
 
-    st_folium(m,width=900,height=600)
+    st_folium(m,width=1000,height=600)
 
-    st.markdown("""
-**Transport Legend**
-
-Blue → Car  
-Green → Train  
-Orange → Bike  
-Purple → Walk  
-Brown → Bus
-""")
+    st.markdown("</div>", unsafe_allow_html=True)
