@@ -3,7 +3,9 @@ from sklearn.preprocessing import MinMaxScaler
 import plotly.express as px
 import plotly.graph_objects as go
 
-from dash import Dash, dcc, html
+import streamlit as st
+import folium
+from streamlit_folium import st_folium
 
 
 def load_data(csv_path: str = "SmartTourRoutePlanner.csv") -> pd.DataFrame:
@@ -312,69 +314,118 @@ def build_traffic_violin(df: pd.DataFrame) -> go.Figure:
     return fig
 
 
-def create_dashboard(df: pd.DataFrame) -> Dash:
-    """Create the Dash app with all notebook plots."""
-    app = Dash(__name__)
+def build_route_map(df: pd.DataFrame) -> folium.Map:
+    """Folium map: India route visualisation — exact replica of notebook code."""
+    city_coords = {
+        "Delhi": (28.6139, 77.2090),
+        "Mumbai": (19.0760, 72.8777),
+        "Bangalore": (12.9716, 77.5946),
+        "Chennai": (13.0827, 80.2707),
+        "Kolkata": (22.5726, 88.3639),
+        "Agra": (27.1767, 78.0081),
+        "Goa": (15.2993, 74.1240),
+        "Shimla": (31.1048, 77.1734),
+        "Ooty": (11.4064, 76.6932),
+        "Mahabalipuram": (12.6208, 80.1937),
+    }
 
-    app.layout = html.Div(
-        style={"fontFamily": "Arial, sans-serif", "padding": "16px"},
-        children=[
-            html.H1(
-                "SmartTour Route Visualization Dashboard",
-                style={"textAlign": "center", "marginBottom": "8px"},
-            ),
-            html.P(
-                "Interactive overview of SmartTour routes, demand patterns, costs, and traveler preferences.",
-                style={"textAlign": "center", "marginBottom": "24px"},
-            ),
-            dcc.Tabs(
-                children=[
-                    dcc.Tab(
-                        label="Traffic & Time",
-                        children=[
-                            html.Br(),
-                            dcc.Graph(figure=build_traffic_time_line(df)),
-                            html.Br(),
-                            dcc.Graph(figure=build_traffic_violin(df)),
-                        ],
-                    ),
-                    dcc.Tab(
-                        label="Demand & Preferences",
-                        children=[
-                            html.Br(),
-                            dcc.Graph(figure=build_demand_heatmap(df)),
-                            html.Br(),
-                            dcc.Graph(figure=build_travel_preference_sunburst(df)),
-                        ],
-                    ),
-                    dcc.Tab(
-                        label="Budget & Satisfaction",
-                        children=[
-                            html.Br(),
-                            dcc.Graph(figure=build_budget_satisfaction_scatter(df)),
-                            html.Br(),
-                            dcc.Graph(figure=build_transport_radar(df)),
-                        ],
-                    ),
-                    dcc.Tab(
-                        label="Cost Breakdown",
-                        children=[
-                            html.Br(),
-                            dcc.Graph(figure=build_cost_sankey(df)),
-                        ],
-                    ),
-                ]
-            ),
-        ],
-    )
+    df = df.copy()
+    df["start_lat"] = df["start_location"].map(lambda x: city_coords.get(x, (None, None))[0])
+    df["start_lon"] = df["start_location"].map(lambda x: city_coords.get(x, (None, None))[1])
+    df["end_lat"] = df["end_location"].map(lambda x: city_coords.get(x, (None, None))[0])
+    df["end_lon"] = df["end_location"].map(lambda x: city_coords.get(x, (None, None))[1])
 
-    return app
+    m = folium.Map(location=[22.5, 80], zoom_start=5, tiles="cartodbpositron")
+
+    mode_colors = {
+        "car": "blue",
+        "train": "green",
+        "bike": "orange",
+        "walk": "purple",
+        "bus": "brown",
+    }
+
+    for _, row in df.iterrows():
+        if pd.notnull(row["start_lat"]) and pd.notnull(row["end_lat"]):
+            start = (row["start_lat"], row["start_lon"])
+            end = (row["end_lat"], row["end_lon"])
+            color = mode_colors.get(str(row["transport_mode"]).lower(), "black")
+
+            folium.PolyLine(
+                locations=[start, end],
+                color=color,
+                weight=3,
+                opacity=0.8,
+                tooltip=f"{row['start_location']} → {row['end_location']} ({row['transport_mode']})",
+            ).add_to(m)
+
+            folium.CircleMarker(
+                location=start,
+                radius=row["popularity_score"] / 20,
+                color="blue",
+                fill=True,
+                fill_opacity=0.7,
+                popup=f"Start: {row['start_location']}",
+            ).add_to(m)
+
+            folium.CircleMarker(
+                location=end,
+                radius=row["popularity_score"] / 20,
+                color="orange",
+                fill=True,
+                fill_opacity=0.7,
+                popup=f"End: {row['end_location']}",
+            ).add_to(m)
+
+    return m
 
 
 def main():
+    st.set_page_config(
+        page_title="SmartTour Route Visualization Dashboard",
+        layout="wide",
+    )
+
+    st.title("SmartTour Route Visualization Dashboard")
+    st.markdown(
+        "Interactive overview of SmartTour routes, demand patterns, costs, and traveler preferences."
+    )
+
     df = load_data()
-    app = create_dashboard(df)
-    app.run_server(debug=True)
+
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(
+        [
+            "🚦 Traffic & Time",
+            "📊 Demand & Preferences",
+            "💰 Budget & Satisfaction",
+            "🔀 Cost Breakdown",
+            "🗺️ Route Map",
+        ]
+    )
+
+    with tab1:
+        st.plotly_chart(build_traffic_time_line(df), use_container_width=True)
+        st.plotly_chart(build_traffic_violin(df), use_container_width=True)
+
+    with tab2:
+        st.plotly_chart(build_demand_heatmap(df), use_container_width=True)
+        st.plotly_chart(build_travel_preference_sunburst(df), use_container_width=True)
+
+    with tab3:
+        st.plotly_chart(build_budget_satisfaction_scatter(df), use_container_width=True)
+        st.plotly_chart(build_transport_radar(df), use_container_width=True)
+
+    with tab4:
+        st.plotly_chart(build_cost_sankey(df), use_container_width=True)
+
+    with tab5:
+        st.subheader("India Travel Route Map")
+        st.markdown(
+            "Routes are colour-coded by transport mode: "
+            "🔵 Car · 🟢 Train · 🟠 Bike · 🟣 Walk · 🟤 Bus"
+        )
+        m = build_route_map(df)
+        st_folium(m, width=900, height=600)
 
 
 if __name__ == "__main__":
