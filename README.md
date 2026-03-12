@@ -9,7 +9,7 @@ An interactive dashboard for exploring smart tour routes across India, built wit
 
 ## Features
 
-The dashboard contains **8 interactive tabs**:
+The dashboard contains **5 interactive tabs**:
 
 | Tab | Content |
 |-----|---------|
