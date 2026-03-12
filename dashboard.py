@@ -248,8 +248,7 @@ def main():
     df = load_data()
     app = create_dashboard(df)
 
-    # FIXED FOR DASH 3
-    app.run(debug=False)
+    app.run(host="0.0.0.0", port=8501, debug=False)
 
 
 if __name__ == "__main__":
