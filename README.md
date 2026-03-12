@@ -1,5 +1,10 @@
 # SmartTour Route Visualization Dashboard
 
+[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://budugameghraj-smarttour-route-visualization-dashboard.streamlit.app)
+
+> 🔗 **Live demo:** https://budugameghraj-smarttour-route-visualization-dashboard.streamlit.app
+> *(Replace this URL with your actual Streamlit app URL once deployment is complete)*
+
 An interactive dashboard for exploring smart tour routes across India, built with **Streamlit** and **Plotly**.
 
 ## Features
