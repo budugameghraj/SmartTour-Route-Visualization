@@ -1,24 +1,32 @@
 import pandas as pd
+import streamlit as st
 from sklearn.preprocessing import MinMaxScaler
 import plotly.express as px
 import plotly.graph_objects as go
 
-from dash import Dash, dcc, html
+st.set_page_config(page_title="SmartTour Dashboard", layout="wide")
 
+@st.cache_data
+def load_data():
+    return pd.read_csv("SmartTourRoutePlanner.csv")
 
-def load_data(csv_path: str = "SmartTourRoutePlanner.csv") -> pd.DataFrame:
-    """Load the dataset used in the notebook."""
-    df = pd.read_csv(csv_path)
-    return df
+df = load_data()
 
+st.title("SmartTour Route Visualization Dashboard")
+st.markdown("Interactive overview of routes, demand patterns, and traveler preferences.")
 
-def build_traffic_time_line(df: pd.DataFrame) -> go.Figure:
-    df = df.copy()
+tab1, tab2, tab3, tab4 = st.tabs([
+    "Traffic & Time",
+    "Demand & Preferences",
+    "Budget & Satisfaction",
+    "Cost Breakdown"
+])
 
+with tab1:
     df["traffic_density_bin"] = pd.cut(
         df["traffic_density"],
-        bins=[0, 0.2, 0.4, 0.6, 0.8, 1],
-        labels=["Very Low", "Low", "Medium", "High", "Very High"],
+        bins=[0,0.2,0.4,0.6,0.8,1],
+        labels=["Very Low","Low","Medium","High","Very High"]
     )
 
     traffic_time = (
@@ -27,229 +35,108 @@ def build_traffic_time_line(df: pd.DataFrame) -> go.Figure:
         .reset_index()
     )
 
-    fig = px.line(
+    fig1 = px.line(
         traffic_time,
         x="traffic_density_bin",
         y="estimated_travel_time_hr",
         markers=True,
-        title="Impact of Traffic Density on Estimated Travel Time",
-        labels={
-            "traffic_density_bin": "Traffic Density Level",
-            "estimated_travel_time_hr": "Average Travel Time (hours)",
-        },
+        title="Impact of Traffic Density on Estimated Travel Time"
     )
 
-    fig.update_layout(title_x=0.5)
-    return fig
+    st.plotly_chart(fig1, use_container_width=True)
 
-
-def build_demand_heatmap(df: pd.DataFrame) -> go.Figure:
-    fig = px.density_heatmap(
-        df,
-        x="season",
-        y="day_type",
-        z="popularity_score",
-        histfunc="avg",
-        animation_frame="transport_mode",
-        text_auto=True,
-        title="Heatmap of Travel Demand (Day Type vs Season)",
-    )
-
-    fig["layout"].pop("updatemenus", None)
-
-    fig.update_layout(template="plotly_white", title_x=0.5)
-
-    return fig
-
-
-def build_budget_satisfaction_scatter(df: pd.DataFrame) -> go.Figure:
-    fig = px.scatter(
-        df,
-        x="user_budget",
-        y="satisfaction_rating",
-        color="transport_mode",
-        symbol="season",
-        title="User Budget vs Satisfaction Rating by Transport Mode",
-        hover_data=[
-            "start_location",
-            "end_location",
-            "season",
-            "transport_mode",
-            "satisfaction_rating",
-        ],
-    )
-
-    fig.update_layout(title_x=0.5)
-    return fig
-
-
-def build_cost_sankey(df: pd.DataFrame) -> go.Figure:
-    entry_fee = df["entry_fee"].mean()
-    accommodation = df["accommodation_cost"].mean()
-    food = df["food_cost"].mean()
-
-    labels = [
-        "Total Travel Cost",
-        f"Entry Fee ({entry_fee:.2f})",
-        f"Accommodation ({accommodation:.2f})",
-        f"Food ({food:.2f})",
-    ]
-
-    fig = go.Figure(
-        data=[
-            go.Sankey(
-                node=dict(
-                    pad=25,
-                    thickness=30,
-                    line=dict(color="black", width=0.5),
-                    label=labels,
-                ),
-                link=dict(
-                    source=[0, 0, 0],
-                    target=[1, 2, 3],
-                    value=[entry_fee, accommodation, food],
-                ),
-            )
-        ]
-    )
-
-    fig.update_layout(title="Travel Cost Flow Distribution")
-    return fig
-
-
-def build_travel_preference_sunburst(df: pd.DataFrame) -> go.Figure:
-    sunburst_data = (
-        df.groupby(["season", "transport_mode", "destination_type"])["popularity_score"]
-        .sum()
-        .reset_index()
-    )
-
-    fig = px.sunburst(
-        sunburst_data,
-        path=["season", "transport_mode", "destination_type"],
-        values="popularity_score",
-        title="Travel Preference Hierarchy",
-    )
-
-    fig.update_layout(title_x=0.5)
-    return fig
-
-
-def build_transport_radar(df: pd.DataFrame) -> go.Figure:
-    radar = df.groupby("transport_mode")[
-        [
-            "user_budget",
-            "user_time_constraint_hr",
-            "popularity_score",
-            "traffic_density",
-            "satisfaction_rating",
-        ]
-    ].mean()
-
-    scaler = MinMaxScaler()
-
-    radar_scaled = pd.DataFrame(
-        scaler.fit_transform(radar),
-        columns=radar.columns,
-        index=radar.index,
-    )
-
-    categories = ["Budget", "Travel Time", "Popularity", "Traffic", "Satisfaction"]
-
-    fig = go.Figure()
-
-    for mode in radar_scaled.index:
-        values = radar_scaled.loc[mode].tolist()
-        values += values[:1]
-
-        fig.add_trace(
-            go.Scatterpolar(
-                r=values,
-                theta=categories + [categories[0]],
-                fill="toself",
-                name=mode,
-            )
-        )
-
-    fig.update_layout(
-        polar=dict(radialaxis=dict(visible=True, range=[0, 1])),
-        title="Traveler Preference Comparison",
-    )
-
-    return fig
-
-
-def build_traffic_violin(df: pd.DataFrame) -> go.Figure:
-    fig = px.violin(
+    fig2 = px.violin(
         df,
         x="day_type",
         y="traffic_density",
         color="day_type",
         box=True,
-        points="all",
+        points="all"
     )
 
-    fig.update_layout(
-        title="Traffic Density Distribution: Weekdays vs Weekends",
-        title_x=0.5,
+    st.plotly_chart(fig2, use_container_width=True)
+
+
+with tab2:
+    fig3 = px.density_heatmap(
+        df,
+        x="season",
+        y="day_type",
+        z="popularity_score",
+        histfunc="avg",
+        title="Heatmap of Travel Demand"
     )
 
-    return fig
+    st.plotly_chart(fig3, use_container_width=True)
 
-
-def create_dashboard(df: pd.DataFrame) -> Dash:
-    app = Dash(__name__)
-
-    app.layout = html.Div(
-        style={"fontFamily": "Arial", "padding": "16px"},
-        children=[
-            html.H1(
-                "SmartTour Route Visualization Dashboard",
-                style={"textAlign": "center"},
-            ),
-            dcc.Tabs(
-                children=[
-                    dcc.Tab(
-                        label="Traffic & Time",
-                        children=[
-                            dcc.Graph(figure=build_traffic_time_line(df)),
-                            dcc.Graph(figure=build_traffic_violin(df)),
-                        ],
-                    ),
-                    dcc.Tab(
-                        label="Demand & Preferences",
-                        children=[
-                            dcc.Graph(figure=build_demand_heatmap(df)),
-                            dcc.Graph(figure=build_travel_preference_sunburst(df)),
-                        ],
-                    ),
-                    dcc.Tab(
-                        label="Budget & Satisfaction",
-                        children=[
-                            dcc.Graph(figure=build_budget_satisfaction_scatter(df)),
-                            dcc.Graph(figure=build_transport_radar(df)),
-                        ],
-                    ),
-                    dcc.Tab(
-                        label="Cost Breakdown",
-                        children=[
-                            dcc.Graph(figure=build_cost_sankey(df)),
-                        ],
-                    ),
-                ]
-            ),
-        ],
+    sunburst_data = (
+        df.groupby(["season","transport_mode","destination_type"])["popularity_score"]
+        .sum()
+        .reset_index()
     )
 
-    return app
+    fig4 = px.sunburst(
+        sunburst_data,
+        path=["season","transport_mode","destination_type"],
+        values="popularity_score"
+    )
+
+    st.plotly_chart(fig4, use_container_width=True)
 
 
-def main():
-    df = load_data()
-    app = create_dashboard(df)
+with tab3:
+    fig5 = px.scatter(
+        df,
+        x="user_budget",
+        y="satisfaction_rating",
+        color="transport_mode",
+        symbol="season",
+        title="User Budget vs Satisfaction"
+    )
 
-    app.run(host="0.0.0.0", port=8501, debug=False)
+    st.plotly_chart(fig5, use_container_width=True)
+
+    radar = df.groupby("transport_mode")[
+        ["user_budget","user_time_constraint_hr","popularity_score","traffic_density","satisfaction_rating"]
+    ].mean()
+
+    scaler = MinMaxScaler()
+    radar_scaled = scaler.fit_transform(radar)
+
+    categories = ["Budget","Time","Popularity","Traffic","Satisfaction"]
+
+    fig6 = go.Figure()
+
+    for i, mode in enumerate(radar.index):
+        values = radar_scaled[i].tolist()
+        values += values[:1]
+
+        fig6.add_trace(go.Scatterpolar(
+            r=values,
+            theta=categories + [categories[0]],
+            fill="toself",
+            name=mode
+        ))
+
+    fig6.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0,1])))
+
+    st.plotly_chart(fig6, use_container_width=True)
 
 
-if __name__ == "__main__":
-    main()
+with tab4:
+    entry = df["entry_fee"].mean()
+    accom = df["accommodation_cost"].mean()
+    food = df["food_cost"].mean()
+
+    fig7 = go.Figure(data=[go.Sankey(
+        node=dict(label=["Total Cost","Entry","Accommodation","Food"]),
+        link=dict(
+            source=[0,0,0],
+            target=[1,2,3],
+            value=[entry,accom,food]
+        )
+    )])
+
+    fig7.update_layout(title="Travel Cost Distribution")
+
+    st.plotly_chart(fig7, use_container_width=True)
